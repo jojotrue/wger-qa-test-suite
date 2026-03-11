@@ -1,0 +1,1376 @@
+{
+  "info": {
+    "_postman_id": "bfad990b-571b-4fb1-a41a-c948981f0e1f",
+    "name": "wger Workout Manager \u2013 QA Test Suite",
+    "description": "Complete Postman collection for testing the wger REST API ([https://wger.de/api/v2/](https://wger.de/api/v2/)).\n\nwger is a free, open-source fitness & gym management platform used as a stand-in for Sportendo API testing practice. It shares the same architectural patterns: user registration/login, JWT auth, user-owned resources (routines = games), public read endpoints, admin/manager roles, and pagination.\n\n\ud83d\udcd6 API Docs: [https://wger.de/api/v2/schema/ui](https://wger.de/api/v2/schema/ui)  \n\ud83d\udcd6 Redoc: [https://wger.de/api/v2/schema/redoc](https://wger.de/api/v2/schema/redoc)\n\n\ud83d\ude80 QUICKSTART:\n\n1. Register free account at [https://wger.de/en/user/registration](https://wger.de/en/user/registration)\n    \n2. Set username + password in the Environment file\n    \n3. Run '\ud83d\udd10 TC-AUTH-01 Login' first \u2014 it auto-saves your Bearer token\n    \n4. All subsequent requests use that token automatically\n    \n\n\u26a0\ufe0f NOTE: wger rate-limits heavy usage. Space out Collection Runner executions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "47933265",
+    "_collection_link": "https://go.postman.co/collection/47933265-bfad990b-571b-4fb1-a41a-c948981f0e1f?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "\ud83d\udd10 Authentication",
+      "item": [
+        {
+          "name": "TC-AUTH-01 | POST Login \u2013 Valid Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-02 | POST Login \u2013 Wrong Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"CompletelyWrongPass999!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-03 | POST Login \u2013 Non-existent User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"ghost_user_zzz_{{$timestamp}}\",\n  \"password\": \"SomePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-04 | POST Login \u2013 Empty Body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-05 | POST Login \u2013 SQL Injection Attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"' OR 1=1--\",\n  \"password\": \"anything\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-06 | POST Refresh Token \u2013 Valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-07 | POST Refresh Token \u2013 Invalid Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"thisisnotavalidjwttoken.fake.fake\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-08 | POST Verify Token \u2013 Valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{accessToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/token/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "token",
+                "verify"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-09 | GET Protected Endpoint \u2013 No Token (Unauthenticated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-10 | GET Protected Endpoint \u2013 Tampered JWT",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjk5OTk5OTk5OTl9.tampered_signature_here"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "JWT login, token refresh, verify, and revoke. Run TC-AUTH-01 first \u2014 it auto-populates accessToken and refreshToken for all other requests."
+    },
+    {
+      "name": "\ud83d\udccb User Profile",
+      "item": [
+        {
+          "name": "TC-USER-01 | GET User Profile \u2013 Own",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/userprofile/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "userprofile",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-USER-02 | PATCH Update User Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show_comments\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/userprofile/1/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "userprofile",
+                "1",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-USER-03 | Mass Assignment \u2013 Try to Escalate to Trainer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trainer\": true,\n  \"is_staff\": true,\n  \"is_superuser\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/userprofile/1/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "userprofile",
+                "1",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Read and update the authenticated user's profile. Tests own-data access and BOLA prevention."
+    },
+    {
+      "name": "\ud83c\udfcb\ufe0f Routines (\u2248 Games)",
+      "item": [
+        {
+          "name": "TC-ROUT-01 | GET List Routines \u2013 Authenticated",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-02 | POST Create Routine \u2013 Valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"QA Test Routine\",\n    \"start\": \"2026-03-11\",\n    \"end\": \"2026-03-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-03 | GET Routine by ID \u2013 Valid",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/{{testRoutineId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "{{testRoutineId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-04 | PATCH Update Routine \u2013 Valid",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"QA Test Routine \u2013 UPDATED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/routine/{{testRoutineId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "{{testRoutineId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-06 | GET Routine \u2013 Not Found (ID 999999)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/999999/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "999999",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-07 | GET Routine \u2013 Unauthenticated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/routine/{{testRoutineId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "{{testRoutineId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-08 | GET List Routines \u2013 Pagination",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/?limit=5&offset=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-09 | DELETE Routine \u2013 Valid",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/{{testRoutineId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "{{testRoutineId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-ROUT-10 | DELETE Routine \u2013 Already Deleted (404)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/{{testRoutineId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "{{testRoutineId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User workout routines \u2014 the closest equivalent to Sportendo 'games'. Tests CRUD, ownership isolation, and pagination."
+    },
+    {
+      "name": "\u26bd Exercises (Public Endpoints)",
+      "item": [
+        {
+          "name": "TC-EX-01 | GET Exercise List \u2013 No Auth Required",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercise/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercise",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EX-02 | GET Exercise by ID \u2013 Valid",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercise/{{testExerciseId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercise",
+                "{{testExerciseId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EX-03 | GET Exercise by ID \u2013 Not Found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercise/99999999/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercise",
+                "99999999",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EX-04 | GET Exercise List \u2013 Filter by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercise/?category=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercise",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EX-05 | GET Exercise List \u2013 Filter by Equipment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercise/?equipment=3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercise",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "equipment",
+                  "value": "3"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EX-06 | GET Exercise Categories \u2013 Public",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/exercisecategory/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercisecategory",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-EX-07 | GET Muscles \u2013 Public",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/muscle/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "muscle",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Public exercise library \u2014 no auth required. Mirrors Sportendo's public game browse endpoint. Tests read-only public access, filtering, and pagination."
+    },
+    {
+      "name": "\ud83d\udcc5 Workout Sessions (\u2248 Game Sign-Up)",
+      "item": [
+        {
+          "name": "TC-SESS-01 | GET Workout Sessions List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SESS-02 | POST Create Session \u2013 Valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"date\": \"2026-03-11\",\n    \"notes\": \"QA automated test session\",\n    \"impression\": \"3\",\n    \"time_start\": \"09:00:00\",\n    \"time_end\": \"10:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SESS-03 | GET Session by ID \u2013 Valid",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/{{testSessionId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                "{{testSessionId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SESS-04 | POST Create Session \u2013 Invalid Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"not-a-real-date\",\n  \"impression\": \"3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SESS-05 | GET Sessions \u2013 Filter by Date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/?format=json&ordering=-date",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "json"
+                },
+                {
+                  "key": "ordering",
+                  "value": "-date"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SESS-06 | DELETE Session \u2013 Valid",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/{{testSessionId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                "{{testSessionId}}",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User workout sessions \u2014 equivalent to signing up for a Sportendo game. Tests CRUD for user-owned session resources."
+    },
+    {
+      "name": "\u2696\ufe0f Weight Log",
+      "item": [
+        {
+          "name": "TC-WGHT-01 | GET Weight Entries",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/weightentry/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "weightentry",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-WGHT-02 | POST Create Weight Entry \u2013 Valid",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-03-01\",\n  \"weight\": \"75.50\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weightentry/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "weightentry",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-WGHT-03 | POST Create Weight Entry \u2013 Negative Weight",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-03-02\",\n  \"weight\": \"-50\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weightentry/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "weightentry",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-WGHT-04 | POST Create Weight Entry \u2013 Missing Date",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": \"80\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weightentry/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "weightentry",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User body weight tracking. Demonstrates user-owned numeric data: create, read, filter, delete."
+    },
+    {
+      "name": "\ud83d\udd12 Security Tests",
+      "item": [
+        {
+          "name": "TC-SEC-01 | BOLA \u2013 Access Another User's Routine (ID 1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/1/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                "1",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SEC-02 | BOLA \u2013 Access Another User's Weight Entry (ID 1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/weightentry/1/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "weightentry",
+                "1",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SEC-03 | Expired JWT \u2013 Access Protected Route",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjAwMDAwMDAwLCJ1c2VyX2lkIjoxfQ.fake_expired_signature"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SEC-04 | No Auth Header \u2013 Protected Route",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/workoutsession/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "workoutsession",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SEC-05 | Malformed Auth Header",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "NotBearer thisisnotvalid"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SEC-06 | XSS Payload in Routine Name",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"<script>alert('xss')</script>\",\n  \"description\": \"XSS test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-SEC-07 | Oversized Payload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"description\": \"Oversized name test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Authorization, BOLA, mass assignment, and rate limiting tests. These are the most valuable tests to run against any app."
+    },
+    {
+      "name": "\ud83c\udfd7\ufe0f API Health & Structure",
+      "item": [
+        {
+          "name": "TC-HLTH-01 | GET API Root \u2013 No Auth",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HLTH-02 | GET API Root \u2013 HTTPS Enforced",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HLTH-03 | OPTIONS \u2013 Check Allowed Methods on Routine",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-HLTH-04 | GET Invalid Endpoint \u2013 404 Handling",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/thisdoesnotexist/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "thisdoesnotexist",
+                ""
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Basic connectivity, API root, and HTTPS enforcement checks."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://wger.de/api/v2",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testRoutineId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testSessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testPlanId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testWeightId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testExerciseId",
+      "value": "9",
+      "type": "string"
+    },
+    {
+      "key": "testDayId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
