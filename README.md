@@ -3,7 +3,7 @@
 **Author:** Joanne Trujillo  
 **Tool:** Postman v11.87.3  
 **API Under Test:** [wger Workout Manager](https://wger.de) — open source REST API  
-**Total Test Cases:** 53 across 8 test folders  
+**Total Test Cases:** 50 across 8 test folders  
 **Testing Type:** Manual API Testing
 
 ---
