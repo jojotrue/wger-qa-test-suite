@@ -130,8 +130,6 @@ TC-SESS-06        → DELETE session (run last in Sessions folder)
 | Avg Response Time | ~540ms |
 | Duration | 1m 14s |
 
-![Test Run Results](test-results/run-results.png)
-
 > **Note:** Response times reflect the public wger.de server. Times may vary depending on server load.
 
 ---
@@ -176,18 +174,6 @@ The Security Tests folder covers SQL injection attempts, JWT tampering, and priv
 
 **Findings documentation**  
 Bugs and API behavior anomalies are logged with test case ID, endpoint, status code, and description — consistent with how defects would be reported in a professional QA environment.
-
----
-
-## Repository Structure
-
-```
-wger-qa-test-suite/
-├── README.md
-├── wger_Workout_Manager_QA_Test_Suite.json    ← Postman collection (import this)
-└── docs/
-    └── test-cases.md                           ← Full test case documentation
-```
 
 ---
 
