@@ -1,18 +1,29 @@
 {
   "info": {
     "_postman_id": "bfad990b-571b-4fb1-a41a-c948981f0e1f",
-    "name": "wger Workout Manager \u2013 QA Test Suite",
-    "description": "Complete Postman collection for testing the wger REST API ([https://wger.de/api/v2/](https://wger.de/api/v2/)).\n\nwger is a free, open-source fitness & gym management platform used as a stand-in for Sportendo API testing practice. It shares the same architectural patterns: user registration/login, JWT auth, user-owned resources (routines = games), public read endpoints, admin/manager roles, and pagination.\n\n\ud83d\udcd6 API Docs: [https://wger.de/api/v2/schema/ui](https://wger.de/api/v2/schema/ui)  \n\ud83d\udcd6 Redoc: [https://wger.de/api/v2/schema/redoc](https://wger.de/api/v2/schema/redoc)\n\n\ud83d\ude80 QUICKSTART:\n\n1. Register free account at [https://wger.de/en/user/registration](https://wger.de/en/user/registration)\n    \n2. Set username + password in the Environment file\n    \n3. Run '\ud83d\udd10 TC-AUTH-01 Login' first \u2014 it auto-saves your Bearer token\n    \n4. All subsequent requests use that token automatically\n    \n\n\u26a0\ufe0f NOTE: wger rate-limits heavy usage. Space out Collection Runner executions.",
+    "name": "wger Workout Manager – QA Test Suite",
+    "description": "API test suite for the wger Workout Manager REST API ([https://wger.de/api/v2/](https://wger.de/api/v2/)). Covers authentication, CRUD, pagination, validation, and security checks across 51 requests and 123 scripted assertions.\n\n📖 API Docs: [https://wger.de/api/v2/schema/ui](https://wger.de/api/v2/schema/ui)\n\n🚀 QUICKSTART\n\n1. Register a free account at [https://wger.de/en/user/registration](https://wger.de/en/user/registration)\n    \n2. Create an environment with `username` and `password` only\n    \n3. Run the collection with a 500 ms delay. TC-AUTH-01 logs in and saves the token automatically; tokens expire after 5 minutes.\n    \n4. Tests tagged \\[KNOWN: BUG-XX\\] fail on purpose. See the GitHub README for details.\n    \n\nFull documentation and findings: github.com/jojotrue/wger-qa-test-suite\n\n⚠️ NOTE: wger rate-limits heavy usage. Space out Collection Runner executions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "47933265",
     "_collection_link": "https://go.postman.co/collection/47933265-bfad990b-571b-4fb1-a41a-c948981f0e1f?source=collection_link"
   },
   "item": [
     {
-      "name": "\ud83d\udd10 Authentication",
+      "name": "Authentication",
       "item": [
         {
-          "name": "TC-AUTH-01 | POST Login \u2013 Valid Credentials",
+          "name": "TC-AUTH-01 | POST Login – Valid Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\nlet json = {};\ntry { json = pm.response.json(); } catch (e) {}\nconst meta = json.meta || {};\n\npm.test('Access token returned', () => {\n  pm.expect(meta.access_token).to.be.a('string').with.lengthOf.above(20);\n});\n\npm.test('Refresh token returned', () => {\n  pm.expect(meta.refresh_token).to.be.a('string').with.lengthOf.above(20);\n});\n\nif (meta.access_token) {\n  pm.collectionVariables.set('accessToken', meta.access_token);\n  pm.collectionVariables.set('refreshToken', meta.refresh_token);\n}\n\npm.test('Response time under 3000ms', () => {\n  pm.expect(pm.response.responseTime).to.be.below(3000);\n});\n\npm.test('Password not in response body', () => {\n  pm.expect(pm.response.text()).to.not.include(pm.environment.get('password'));\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -31,19 +42,87 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/token",
+              "raw": "https://wger.de/allauth/app/v1/auth/login",
+              "protocol": "https",
               "host": [
-                "{{baseUrl}}"
+                "wger",
+                "de"
               ],
               "path": [
-                "token"
+                "allauth",
+                "app",
+                "v1",
+                "auth",
+                "login"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "TC-AUTH-02 | POST Login \u2013 Wrong Password",
+          "name": "TC-AUTH-02 | POST Login – Wrong Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\n\npm.test('Returns an error message', () => {\n  pm.expect(json.errors).to.be.an('array').that.is.not.empty;\n});\n\npm.test('No tokens issued', () => {\n  pm.expect((json.meta || {}).access_token).to.be.undefined;\n});\n\nif (json.errors && json.errors.length) {\n  pm.collectionVariables.set('loginErrorCode', json.errors[0].code);\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"CompletelyWrongPass999!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://wger.de/allauth/app/v1/auth/login",
+              "protocol": "https",
+              "host": [
+                "wger",
+                "de"
+              ],
+              "path": [
+                "allauth",
+                "app",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-03 | POST Login – Non-existent User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\n\npm.test('No tokens issued', () => {\n  pm.expect((json.meta || {}).access_token).to.be.undefined;\n});\n\npm.test('Same error as wrong password (no user enumeration)', () => {\n  pm.expect(json.errors[0].code).to.eql(pm.collectionVariables.get('loginErrorCode'));\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -54,22 +133,44 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"CompletelyWrongPass999!\"\n}"
+              "raw": "{\n  \"username\": \"ghost_user_zzz_{{$timestamp}}\",\n  \"password\": \"SomePass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/token",
+              "raw": "https://wger.de/allauth/app/v1/auth/login",
+              "protocol": "https",
               "host": [
-                "{{baseUrl}}"
+                "wger",
+                "de"
               ],
               "path": [
-                "token"
+                "allauth",
+                "app",
+                "v1",
+                "auth",
+                "login"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "TC-AUTH-03 | POST Login \u2013 Non-existent User",
+          "name": "TC-AUTH-04 | POST Login – Empty Body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\n\npm.test('Returns validation errors', () => {\n  pm.expect(json.errors).to.be.an('array').that.is.not.empty;\n});\n\npm.test('No tokens issued', () => {\n  pm.expect((json.meta || {}).access_token).to.be.undefined;\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -80,22 +181,44 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"ghost_user_zzz_{{$timestamp}}\",\n  \"password\": \"SomePass123!\"\n}"
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/token",
+              "raw": "https://wger.de/allauth/app/v1/auth/login",
+              "protocol": "https",
               "host": [
-                "{{baseUrl}}"
+                "wger",
+                "de"
               ],
               "path": [
-                "token"
+                "allauth",
+                "app",
+                "v1",
+                "auth",
+                "login"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "TC-AUTH-04 | POST Login \u2013 Empty Body",
+          "name": "TC-AUTH-05 | POST Login – SQL Injection Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 400 Bad Request (injection rejected)', () => pm.response.to.have.status(400));\n\npm.test('No tokens issued', () => {\n  pm.expect((json.meta || {}).access_token).to.be.undefined;\n});\n\npm.test('No database error leaked', () => {\n  const body = pm.response.text().toLowerCase();\n  ['sql', 'syntax', 'traceback', 'psycopg', 'sqlite'].forEach(word =>\n    pm.expect(body).to.not.include(word));\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -106,22 +229,44 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{}"
+              "raw": "{\n  \"username\": \"' OR 1=1--\",\n  \"password\": \"anything\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/token",
+              "raw": "https://wger.de/allauth/app/v1/auth/login",
+              "protocol": "https",
               "host": [
-                "{{baseUrl}}"
+                "wger",
+                "de"
               ],
               "path": [
-                "token"
+                "allauth",
+                "app",
+                "v1",
+                "auth",
+                "login"
               ]
             }
           },
           "response": []
         },
         {
-          "name": "TC-AUTH-05 | POST Login \u2013 SQL Injection Attempt",
+          "name": "TC-AUTH-06 | POST Refresh Token – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   let json = {};\ntry { json = pm.response.json(); } catch (e) {}\nconst data = json.data || {};\nconst oldRefresh = pm.collectionVariables.get('refreshToken');\n\npm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\npm.test('New access token returned', () => {\n  pm.expect(data.access_token).to.be.a('string').with.lengthOf.above(20);\n});\n\npm.test('Refresh token rotated', () => {\n  pm.expect(data.refresh_token).to.be.a('string');\n  pm.expect(data.refresh_token).to.not.eql(oldRefresh);\n});\n\nif (data.access_token) pm.collectionVariables.set('accessToken', data.access_token);\nif (data.refresh_token) pm.collectionVariables.set('refreshToken', data.refresh_token);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -132,41 +277,25 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"' OR 1=1--\",\n  \"password\": \"anything\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/token",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "token"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "TC-AUTH-06 | POST Refresh Token \u2013 Valid",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+              "raw": "\n     {\"refresh_token\": \"{{refreshToken}}\"}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/token/refresh",
+              "raw": "https://wger.de/allauth/app/v1/tokens/refresh",
+              "protocol": "https",
               "host": [
-                "{{baseUrl}}"
+                "wger",
+                "de"
               ],
               "path": [
-                "token",
+                "allauth",
+                "app",
+                "v1",
+                "tokens",
                 "refresh"
               ]
             }
@@ -174,7 +303,18 @@
           "response": []
         },
         {
-          "name": "TC-AUTH-07 | POST Refresh Token \u2013 Invalid Token",
+          "name": "TC-AUTH-07 | POST Refresh Token – Invalid Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\nconst errors = json.errors || [];\n\npm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\n\npm.test('Response body reports status 400', () => {\n  pm.expect(json.status).to.eql(400);\n});\n\npm.test('Rejected as invalid, not as missing field', () => {\n  const missing = errors.some(e => e.code === 'required');\n  pm.expect(missing).to.be.false;\n});\n\npm.test('No tokens issued', () => {\n  pm.expect((json.data || {}).access_token).to.be.undefined;\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -185,15 +325,25 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"refresh\": \"thisisnotavalidjwttoken.fake.fake\"\n}"
+              "raw": "{\"refresh_token\": \"thisisnotavalidjwttoken.fake.fake\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/token/refresh",
+              "raw": "https://wger.de/allauth/app/v1/tokens/refresh",
+              "protocol": "https",
               "host": [
-                "{{baseUrl}}"
+                "wger",
+                "de"
               ],
               "path": [
-                "token",
+                "allauth",
+                "app",
+                "v1",
+                "tokens",
                 "refresh"
               ]
             }
@@ -201,7 +351,18 @@
           "response": []
         },
         {
-          "name": "TC-AUTH-08 | POST Verify Token \u2013 Valid",
+          "name": "TC-AUTH-08 | POST Verify Token – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -228,7 +389,68 @@
           "response": []
         },
         {
-          "name": "TC-AUTH-09 | GET Protected Endpoint \u2013 No Token (Unauthenticated)",
+          "name": "TC-AUTH-09 | GET Protected Endpoint – No Token [KNOWN: BUG-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Returns 401 Unauthorized [KNOWN: BUG-01]', () => pm.response.to.have.status(401));\n\npm.test('Access denied (no data returned)', () => {\n  pm.expect(json.results).to.be.undefined;\n});\n\npm.test('Error message explains the denial', () => {\n  pm.expect(json.detail).to.be.a('string');\n});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/routine/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routine",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TC-AUTH-10 | GET Protected Endpoint – Tampered JWT [KNOWN: BUG-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Returns 401 Unauthorized [KNOWN: BUG-01]', () => pm.response.to.have.status(401));\n\npm.test('Access denied (no data returned)', () => {\n  pm.expect(json.results).to.be.undefined;\n});\n\npm.test('Error message explains the denial', () => {\n  pm.expect(json.detail).to.be.a('string');\n});"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fake tampered JWT (deliberately invalid signature); built in parts so Postman doesn't convert it to a secret\nconst fakeToken = [\n  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',\n  'eyJ1c2VyX2lkIjoxLCJleHAiOjk5OTk5OTk5OTl9',\n  'tampered_signature_here'\n].join('.');\npm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + fakeToken });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -246,36 +468,67 @@
           "response": []
         },
         {
-          "name": "TC-AUTH-10 | GET Protected Endpoint \u2013 Tampered JWT",
+          "name": "TC-AUTH-11 | POST Refresh Token – Documented Endpoint [KNOWN: BUG-02]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   pm.test('Documented refresh endpoint accepts login refresh token [KNOWN: BUG-02]', () => {\n     pm.response.to.have.status(200);\n   });"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
               {
-                "key": "Authorization",
-                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjk5OTk5OTk5OTl9.tampered_signature_here"
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "\n   {\"refresh\": \"{{refreshToken}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{baseUrl}}/routine/",
+              "raw": "{{baseUrl}}/token/refresh",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "routine",
-                ""
+                "token",
+                "refresh"
               ]
             }
           },
           "response": []
         }
       ],
-      "description": "JWT login, token refresh, verify, and revoke. Run TC-AUTH-01 first \u2014 it auto-populates accessToken and refreshToken for all other requests."
+      "description": "Login, token refresh, and token verification through wger’s current auth flow (`/allauth/app/v1/`). Covers valid and invalid credentials, empty and SQL-injection payloads, user-enumeration resistance, token rotation, and access to protected endpoints with missing or tampered tokens. TC-AUTH-01 saves the access token used by the rest of the suite; tokens expire after 5 minutes."
     },
     {
-      "name": "\ud83d\udccb User Profile",
+      "name": "User Profile",
       "item": [
         {
-          "name": "TC-USER-01 | GET User Profile \u2013 Own",
+          "name": "TC-USER-01 | GET User Profile – Own",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\npm.test('Profile fields present', () => {\n  pm.expect(json).to.have.property('username');\n  pm.expect(json).to.have.property('time_zone');\n});\n\npm.test('Password/hash not in response', () => {\n  pm.expect(pm.response.text()).to.not.include(pm.environment.get('password'));\n  pm.expect(json).to.not.have.property('password');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -298,7 +551,27 @@
           "response": []
         },
         {
-          "name": "TC-USER-02 | PATCH Update User Profile",
+          "name": "TC-USER-02 | PATCH Update User Profile – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   let json = {};\n   try { json = pm.response.json(); } catch (e) {}\n\n   pm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\n   pm.test('Profile field updated', () => {\n     pm.expect(json.sleep_hours).to.eql(Number(pm.variables.get('sleepHours')));\n   });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "     pm.variables.set('sleepHours', Math.floor(Math.random() * 4) + 5);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [
@@ -313,16 +586,20 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"show_comments\": true\n}"
+              "raw": "{\"sleep_hours\": {{sleepHours}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/userprofile/1/",
+              "raw": "{{baseUrl}}/userprofile/",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "userprofile",
-                "1",
                 ""
               ]
             }
@@ -330,7 +607,18 @@
           "response": []
         },
         {
-          "name": "TC-USER-03 | Mass Assignment \u2013 Try to Escalate to Trainer",
+          "name": "TC-USER-03 | Mass Assignment – Try to Escalate to Trainer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   let json = {};\n   try { json = pm.response.json(); } catch (e) {}\n\n   pm.test('Request handled (200 ignored, or 400 rejected)', () => {\n     pm.expect(pm.response.code).to.be.oneOf([200, 400]);\n   });\n\n   pm.test('No privilege escalation in response', () => {\n     pm.expect(json.is_staff).to.not.eql(true);\n     pm.expect(json.is_superuser).to.not.eql(true);\n     pm.expect(json.trainer).to.not.eql(true);\n   });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [
@@ -345,16 +633,20 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"trainer\": true,\n  \"is_staff\": true,\n  \"is_superuser\": true\n}"
+              "raw": "{\n  \"trainer\": true,\n  \"is_staff\": true,\n  \"is_superuser\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseUrl}}/userprofile/1/",
+              "raw": "{{baseUrl}}/userprofile/",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "userprofile",
-                "1",
                 ""
               ]
             }
@@ -362,13 +654,24 @@
           "response": []
         }
       ],
-      "description": "Read and update the authenticated user's profile. Tests own-data access and BOLA prevention."
+      "description": "Reads and updates the authenticated user’s profile (`/userprofile/`). Includes a mass-assignment check confirming that a user can’t promote themselves to staff, superuser, or trainer."
     },
     {
-      "name": "\ud83c\udfcb\ufe0f Routines (\u2248 Games)",
+      "name": "Routines",
       "item": [
         {
-          "name": "TC-ROUT-01 | GET List Routines \u2013 Authenticated",
+          "name": "TC-ROUT-01 | GET List Routines – Authenticated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));\npm.test('Paginated response structure', () => {\n  const json = pm.response.json();\n  pm.expect(json).to.have.property('count');\n  pm.expect(json).to.have.property('results');\n  pm.expect(json.results).to.be.an('array');\n});\npm.test('Response time under 3000ms', () => {\n  pm.expect(pm.response.responseTime).to.be.below(3000);\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -391,7 +694,18 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-02 | POST Create Routine \u2013 Valid",
+          "name": "TC-ROUT-02 | POST Create Routine – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 201 Created', () => pm.response.to.have.status(201));\n\npm.test('Routine ID returned', () => {\n  pm.expect(json.id).to.be.a('number');\n});\n\npm.test('Routine name matches request', () => {\n  pm.expect(json.name).to.eql('QA Test Routine');\n});\n\nif (json.id) pm.collectionVariables.set('testRoutineId', json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -427,7 +741,18 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-03 | GET Routine by ID \u2013 Valid",
+          "name": "TC-ROUT-03 | GET Routine by ID – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\npm.test('Correct routine returned', () => {\n  pm.expect(String(json.id)).to.eql(String(pm.collectionVariables.get('testRoutineId')));\n});\n\npm.test('Routine name present', () => {\n  pm.expect(json.name).to.be.a('string');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -451,7 +776,21 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-04 | PATCH Update Routine \u2013 Valid",
+          "name": "TC-ROUT-04 | PATCH Update Routine – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Name was updated', () => {",
+                  "  pm.expect(pm.response.json().name).to.equal('QA Test Routine – UPDATED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "PATCH",
             "header": [
@@ -466,7 +805,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"QA Test Routine \u2013 UPDATED\"\n}"
+              "raw": "{\n  \"name\": \"QA Test Routine – UPDATED\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/routine/{{testRoutineId}}/",
@@ -483,7 +822,18 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-06 | GET Routine \u2013 Not Found (ID 999999)",
+          "name": "TC-ROUT-06 | GET Routine – Not Found (ID 999999)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -507,7 +857,18 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-07 | GET Routine \u2013 Unauthenticated",
+          "name": "TC-ROUT-07 | GET Routine – Unauthenticated [KNOWN: BUG-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Returns 401 Unauthorized [KNOWN: BUG-01]', () => pm.response.to.have.status(401));\n\npm.test('Access denied (no data returned)', () => {\n  pm.expect(json.results).to.be.undefined;\n});\n\npm.test('Error message explains the denial', () => {\n  pm.expect(json.detail).to.be.a('string');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -526,7 +887,22 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-08 | GET List Routines \u2013 Pagination",
+          "name": "TC-ROUT-08 | GET List Routines – Pagination",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Respects limit parameter', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.results.length).to.be.at.most(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -559,7 +935,18 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-09 | DELETE Routine \u2013 Valid",
+          "name": "TC-ROUT-09 | DELETE Routine – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -583,7 +970,18 @@
           "response": []
         },
         {
-          "name": "TC-ROUT-10 | DELETE Routine \u2013 Already Deleted (404)",
+          "name": "TC-ROUT-10 | DELETE Routine – Already Deleted (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 Not Found (already deleted)', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -607,13 +1005,24 @@
           "response": []
         }
       ],
-      "description": "User workout routines \u2014 the closest equivalent to Sportendo 'games'. Tests CRUD, ownership isolation, and pagination."
+      "description": "Full CRUD for user workout routines: create, read by ID, partial update, delete, and delete-again (404). Also covers pagination, a non-existent ID, and unauthenticated access. TC-ROUT-02 saves the new routine’s ID for the tests that follow."
     },
     {
-      "name": "\u26bd Exercises (Public Endpoints)",
+      "name": "Exercises (Public Endpoints)",
       "item": [
         {
-          "name": "TC-EX-01 | GET Exercise List \u2013 No Auth Required",
+          "name": "TC-EX-01 | GET Exercise List – No Auth Required",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\nconst list = json.results || [];\n\npm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\npm.test('Results array returned', () => {\n  pm.expect(list).to.be.an('array').with.lengthOf.above(0);\n});\n\npm.test('Pagination fields present', () => {\n  pm.expect(json).to.have.all.keys('count', 'next', 'previous', 'results');\n});\n\npm.test('Response time under 3000ms', () => {\n  pm.expect(pm.response.responseTime).to.be.below(3000);\n});\n\nif (list.length) pm.collectionVariables.set('testExerciseId', String(list[0].id));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -631,7 +1040,24 @@
           "response": []
         },
         {
-          "name": "TC-EX-02 | GET Exercise by ID \u2013 Valid",
+          "name": "TC-EX-02 | GET Exercise by ID – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Exercise fields present', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.expect(json).to.have.property('category');",
+                  "  pm.expect(json).to.have.property('muscles');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -650,7 +1076,18 @@
           "response": []
         },
         {
-          "name": "TC-EX-03 | GET Exercise by ID \u2013 Not Found",
+          "name": "TC-EX-03 | GET Exercise by ID – Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -669,7 +1106,24 @@
           "response": []
         },
         {
-          "name": "TC-EX-04 | GET Exercise List \u2013 Filter by Category",
+          "name": "TC-EX-04 | GET Exercise List – Filter by Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('All results match category filter', () => {",
+                  "  const results = pm.response.json().results;",
+                  "  results.forEach(e => {",
+                  "    pm.expect(e.category).to.equal(10);",
+                  "  });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -693,7 +1147,21 @@
           "response": []
         },
         {
-          "name": "TC-EX-05 | GET Exercise List \u2013 Filter by Equipment",
+          "name": "TC-EX-05 | GET Exercise List – Filter by Equipment",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Results returned as array', () => {",
+                  "  pm.expect(pm.response.json().results).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -717,7 +1185,23 @@
           "response": []
         },
         {
-          "name": "TC-EX-06 | GET Exercise Categories \u2013 Public",
+          "name": "TC-EX-06 | GET Exercise Categories – Public",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Categories returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.results).to.be.an('array').with.lengthOf.above(0);",
+                  "  pm.expect(json.results[0]).to.have.property('name');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -735,7 +1219,21 @@
           "response": []
         },
         {
-          "name": "TC-EX-07 | GET Muscles \u2013 Public",
+          "name": "TC-EX-07 | GET Muscles – Public",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Muscle list returned', () => {",
+                  "  pm.expect(pm.response.json().results).to.be.an('array').with.lengthOf.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -753,13 +1251,29 @@
           "response": []
         }
       ],
-      "description": "Public exercise library \u2014 no auth required. Mirrors Sportendo's public game browse endpoint. Tests read-only public access, filtering, and pagination."
+      "description": "Public exercise data that requires no login: the exercise list, lookup by ID, a non-existent ID, filtering by category and equipment, plus exercise categories and muscles. TC-EX-01 saves a valid exercise ID for TC-EX-02."
     },
     {
-      "name": "\ud83d\udcc5 Workout Sessions (\u2248 Game Sign-Up)",
+      "name": "Workout Sessions",
       "item": [
         {
           "name": "TC-SESS-01 | GET Workout Sessions List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginated results returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('results');",
+                  "  pm.expect(json.results).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -782,7 +1296,18 @@
           "response": []
         },
         {
-          "name": "TC-SESS-02 | POST Create Session \u2013 Valid",
+          "name": "TC-SESS-02 | POST Create Session – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 201 Created', () => pm.response.to.have.status(201));\n\npm.test('Session ID returned', () => {\n  pm.expect(json.id).to.be.a('string').with.lengthOf.above(0);\n});\n\nif (json.id) pm.collectionVariables.set('testSessionId', String(json.id));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -797,7 +1322,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"date\": \"2026-03-11\",\n    \"notes\": \"QA automated test session\",\n    \"impression\": \"3\",\n    \"time_start\": \"09:00:00\",\n    \"time_end\": \"10:00:00\"\n}"
+              "raw": "{\n  \"notes\": \"QA automated test session\",\n  \"impression\": \"3\",\n  \"datetime_start\": \"2026-03-11T09:00:00-06:00\",\n  \"datetime_end\": \"2026-03-11T10:00:00-06:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/workoutsession/",
@@ -813,7 +1343,18 @@
           "response": []
         },
         {
-          "name": "TC-SESS-03 | GET Session by ID \u2013 Valid",
+          "name": "TC-SESS-03 | GET Session by ID – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\npm.test('Session fields present (current schema)', () => {\n  pm.expect(json).to.include.all.keys('id', 'routine', 'notes', 'impression', 'datetime_start', 'datetime_end');\n});\n\npm.test('Correct session returned', () => {\n  pm.expect(json.id).to.eql(pm.collectionVariables.get('testSessionId'));\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -837,7 +1378,18 @@
           "response": []
         },
         {
-          "name": "TC-SESS-04 | POST Create Session \u2013 Invalid Date",
+          "name": "TC-SESS-04 | POST Create Session – Invalid Date",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\npm.test('Date field error returned', () => {\n  pm.expect(pm.response.json()).to.have.property('date');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -852,7 +1404,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"date\": \"not-a-real-date\",\n  \"impression\": \"3\"\n}"
+              "raw": "{\n  \"date\": \"not-a-real-date\",\n  \"impression\": \"3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/workoutsession/",
@@ -868,7 +1425,18 @@
           "response": []
         },
         {
-          "name": "TC-SESS-05 | GET Sessions \u2013 Filter by Date",
+          "name": "TC-SESS-05 | GET Sessions – Ordered by Start Time",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\nconst times = (json.results || [])\n  .map(s => s.datetime_start)\n  .filter(Boolean)\n  .map(t => new Date(t).getTime());\n\npm.test('Status 200 OK', () => pm.response.to.have.status(200));\n\npm.test('Sessions ordered by start time, newest first', () => {\n  for (let i = 1; i < times.length; i++) {\n    pm.expect(times[i - 1]).to.be.at.least(times[i]);\n  }\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -878,7 +1446,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/workoutsession/?format=json&ordering=-date",
+              "raw": "{{baseUrl}}/workoutsession/?ordering=-datetime_start",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -888,12 +1456,8 @@
               ],
               "query": [
                 {
-                  "key": "format",
-                  "value": "json"
-                },
-                {
                   "key": "ordering",
-                  "value": "-date"
+                  "value": "-datetime_start"
                 }
               ]
             }
@@ -901,7 +1465,18 @@
           "response": []
         },
         {
-          "name": "TC-SESS-06 | DELETE Session \u2013 Valid",
+          "name": "TC-SESS-06 | DELETE Session – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "DELETE",
             "header": [
@@ -925,13 +1500,27 @@
           "response": []
         }
       ],
-      "description": "User workout sessions \u2014 equivalent to signing up for a Sportendo game. Tests CRUD for user-owned session resources."
+      "description": "Create, read, order, and delete workout sessions using the current schema (`datetime_start` / `datetime_end`, UUID IDs). Includes an invalid-date negative test. TC-SESS-02 saves the new session’s ID for the tests that follow."
     },
     {
-      "name": "\u2696\ufe0f Weight Log",
+      "name": "Weight Log",
       "item": [
         {
           "name": "TC-WGHT-01 | GET Weight Entries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginated results', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('results');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -954,7 +1543,26 @@
           "response": []
         },
         {
-          "name": "TC-WGHT-02 | POST Create Weight Entry \u2013 Valid",
+          "name": "TC-WGHT-02 | POST Create Weight Entry – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Weight entry ID returned', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('id');",
+                  "  pm.collectionVariables.set('testWeightId', String(json.id));",
+                  "});",
+                  "pm.test('Weight value correct', () => {",
+                  "  pm.expect(parseFloat(pm.response.json().weight)).to.equal(75.50);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -985,7 +1593,18 @@
           "response": []
         },
         {
-          "name": "TC-WGHT-03 | POST Create Weight Entry \u2013 Negative Weight",
+          "name": "TC-WGHT-03 | POST Create Weight Entry – Negative Weight",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\n\npm.test('Rejected on weight field', () => {\n  pm.expect(json).to.have.property('weight');\n  pm.expect(json).to.not.have.property('date');\n});\n\npm.test('Valid range stated (20–350 kg)', () => {\n  pm.expect(json.weight[0]).to.include('20').and.to.include('350');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1000,7 +1619,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"date\": \"2026-03-02\",\n  \"weight\": \"-50\"\n}"
+              "raw": "{\n  \"date\": \"2026-03-02\",\n  \"weight\": \"-50\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/weightentry/",
@@ -1016,7 +1640,18 @@
           "response": []
         },
         {
-          "name": "TC-WGHT-04 | POST Create Weight Entry \u2013 Missing Date",
+          "name": "TC-WGHT-04 | POST Create Weight Entry – Missing Date (defaults to now)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 201 Created', () => pm.response.to.have.status(201));\n\npm.test('Date defaults to current time', () => {\n  const saved = new Date(json.date).getTime();\n  const now = Date.now();\n  pm.expect(now - saved).to.be.below(5 * 60 * 1000); // within 5 minutes\n});\n\npm.test('Weight value saved', () => {\n  pm.expect(json.weight).to.eql('80.00');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1031,7 +1666,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"weight\": \"80\"\n}"
+              "raw": "{\n  \"weight\": \"80\"\n}",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/weightentry/",
@@ -1047,13 +1687,24 @@
           "response": []
         }
       ],
-      "description": "User body weight tracking. Demonstrates user-owned numeric data: create, read, filter, delete."
+      "description": "Create and list weight entries. Negative cases cover a negative weight value; a missing date is accepted and defaults to the current time."
     },
     {
-      "name": "\ud83d\udd12 Security Tests",
+      "name": "Security Tests",
       "item": [
         {
-          "name": "TC-SEC-01 | BOLA \u2013 Access Another User's Routine (ID 1)",
+          "name": "TC-SEC-01 | BOLA – Access Another User's Routine (ID 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Other user\\'s resource not accessible (403 or 404)', () => {\n  pm.expect(pm.response.code).to.be.oneOf([403, 404]);\n});\n\npm.test('No resource data leaked', () => {\n  pm.expect(json.id).to.be.undefined;\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1077,7 +1728,18 @@
           "response": []
         },
         {
-          "name": "TC-SEC-02 | BOLA \u2013 Access Another User's Weight Entry (ID 1)",
+          "name": "TC-SEC-02 | BOLA – Access Another User's Weight Entry (ID 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Other user\\'s resource not accessible (403 or 404)', () => {\n  pm.expect(pm.response.code).to.be.oneOf([403, 404]);\n});\n\npm.test('No resource data leaked', () => {\n  pm.expect(json.id).to.be.undefined;\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1101,15 +1763,30 @@
           "response": []
         },
         {
-          "name": "TC-SEC-03 | Expired JWT \u2013 Access Protected Route",
+          "name": "TC-SEC-03 | Expired JWT – Access Protected Route [KNOWN: BUG-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   let json = {};\n   try { json = pm.response.json(); } catch (e) {}\n\n   pm.test('Returns 401 Unauthorized [KNOWN: BUG-01]', () => pm.response.to.have.status(401));\n\n   pm.test('Access denied (no data returned)', () => {\n     pm.expect(json.results).to.be.undefined;\n   });\n\n   pm.test('Error message explains the denial', () => {\n     pm.expect(json.detail).to.be.a('string');\n   });"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Fake expired JWT (exp in 2020, invalid signature); built in parts so Postman doesn't convert it to a secret\nconst fakeToken = [\n  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',\n  'eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjAwMDAwMDAwLCJ1c2VyX2lkIjoxfQ',\n  'fake_expired_signature'\n].join('.');\npm.request.headers.upsert({ key: 'Authorization', value: 'Bearer ' + fakeToken });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjAwMDAwMDAwLCJ1c2VyX2lkIjoxfQ.fake_expired_signature"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/routine/",
               "host": [
@@ -1124,7 +1801,18 @@
           "response": []
         },
         {
-          "name": "TC-SEC-04 | No Auth Header \u2013 Protected Route",
+          "name": "TC-SEC-04 | No Auth Header – Protected Route [KNOWN: BUG-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   let json = {};\n   try { json = pm.response.json(); } catch (e) {}\n\n   pm.test('Returns 401 Unauthorized [KNOWN: BUG-01]', () => pm.response.to.have.status(401));\n\n   pm.test('Access denied (no data returned)', () => {\n     pm.expect(json.results).to.be.undefined;\n   });\n\n   pm.test('Error message explains the denial', () => {\n     pm.expect(json.detail).to.be.a('string');\n   });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -1142,7 +1830,18 @@
           "response": []
         },
         {
-          "name": "TC-SEC-05 | Malformed Auth Header",
+          "name": "TC-SEC-05 | Malformed Auth Header [KNOWN: BUG-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "   let json = {};\n   try { json = pm.response.json(); } catch (e) {}\n\n   pm.test('Returns 401 Unauthorized [KNOWN: BUG-01]', () => pm.response.to.have.status(401));\n\n   pm.test('Access denied (no data returned)', () => {\n     pm.expect(json.results).to.be.undefined;\n   });\n\n   pm.test('Error message explains the denial', () => {\n     pm.expect(json.detail).to.be.a('string');\n   });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1166,6 +1865,17 @@
         },
         {
           "name": "TC-SEC-06 | XSS Payload in Routine Name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Handled without server error (201 or 400)', () => {\n  pm.expect(pm.response.code).to.be.oneOf([201, 400]);\n});\n\npm.test('Response served as JSON, not HTML', () => {\n  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');\n});\n\nif (pm.response.code === 400) {\n  pm.test('Rejected on name only', () => {\n    pm.expect(json).to.have.property('name');\n    pm.expect(json).to.not.have.property('start');\n  });\n}\n\n// Clean up: delete the routine if one was created\nif (pm.response.code === 201 && json.id) {\n  pm.sendRequest({\n    url: pm.variables.get('baseUrl') + '/routine/' + json.id + '/',\n    method: 'DELETE',\n    header: { Authorization: 'Bearer ' + pm.variables.get('accessToken') }\n  });\n}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1180,7 +1890,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"<script>alert('xss')</script>\",\n  \"description\": \"XSS test\"\n}"
+              "raw": "{\n  \"name\": \"<script>alert(1)</script>\",\n  \"start\": \"2026-03-11\",\n  \"end\": \"2026-03-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/routine/",
@@ -1197,6 +1912,17 @@
         },
         {
           "name": "TC-SEC-07 | Oversized Payload",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};\ntry { json = pm.response.json(); } catch (e) {}\n\npm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));\n\npm.test('Rejected for name length only', () => {\n  pm.expect(json).to.have.property('name');\n  pm.expect(json).to.not.have.property('start');\n  pm.expect(json).to.not.have.property('end');\n});\n\npm.test('25-character limit enforced', () => {\n  pm.expect(json.name[0]).to.include('25');\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -1211,7 +1937,12 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"description\": \"Oversized name test\"\n}"
+              "raw": "{\n  \"name\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"start\": \"2026-03-11\",\n  \"end\": \"2026-03-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/routine/",
@@ -1227,13 +1958,36 @@
           "response": []
         }
       ],
-      "description": "Authorization, BOLA, mass assignment, and rate limiting tests. These are the most valuable tests to run against any app."
+      "description": "Broken object-level authorization (accessing another user’s routine and weight entry), expired, missing, and malformed auth headers, an XSS payload in a routine name, and an oversized payload that checks the 25-character name limit. Test routines created here are deleted automatically."
     },
     {
-      "name": "\ud83c\udfd7\ufe0f API Health & Structure",
+      "name": "API Health & Structure",
       "item": [
         {
-          "name": "TC-HLTH-01 | GET API Root \u2013 No Auth",
+          "name": "TC-HLTH-01 | GET API Root – No Auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('API root lists known endpoints', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json).to.have.property('exercise');",
+                  "  pm.expect(json).to.have.property('routine');",
+                  "  pm.expect(json).to.have.property('workoutsession');",
+                  "  pm.expect(json).to.have.property('weightentry');",
+                  "});",
+                  "pm.test('Response time under 3000ms', () => {",
+                  "  pm.expect(pm.response.responseTime).to.be.below(3000);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1255,7 +2009,18 @@
           "response": []
         },
         {
-          "name": "TC-HLTH-02 | GET API Root \u2013 HTTPS Enforced",
+          "name": "TC-HLTH-02 | GET API Root – HTTPS Request, No Version Leak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Request made over HTTPS', () => {\n  pm.expect(pm.request.url.toString()).to.include('https://');\n});\npm.test('Response does not expose server internals', () => {\n  const headers = pm.response.headers;\n  // Server header should not reveal exact version\n  const server = headers.get('server') || '';\n  pm.expect(server).to.not.match(/Apache\\/\\d|nginx\\/\\d|Python\\/\\d/i);\n});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1277,7 +2042,23 @@
           "response": []
         },
         {
-          "name": "TC-HLTH-03 | OPTIONS \u2013 Check Allowed Methods on Routine",
+          "name": "TC-HLTH-03 | OPTIONS – Check Allowed Methods on Routine",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Allowed methods listed', () => {",
+                  "  const allow = pm.response.headers.get('Allow') || '';",
+                  "  pm.expect(allow).to.include('GET');",
+                  "  pm.expect(allow).to.include('POST');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "OPTIONS",
             "header": [
@@ -1300,7 +2081,24 @@
           "response": []
         },
         {
-          "name": "TC-HLTH-04 | GET Invalid Endpoint \u2013 404 Handling",
+          "name": "TC-HLTH-04 | GET Invalid Endpoint – 404 Handling",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('No stack trace or internal error leaked', () => {",
+                  "  const body = pm.response.text().toLowerCase();",
+                  "  pm.expect(body).to.not.include('traceback');",
+                  "  pm.expect(body).to.not.include('exception');",
+                  "  pm.expect(body).to.not.include('django');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [
@@ -1323,54 +2121,41 @@
           "response": []
         }
       ],
-      "description": "Basic connectivity, API root, and HTTPS enforcement checks."
+      "description": "Baseline API checks: the root endpoint responds without auth and lists the main endpoints, requests go over HTTPS without exposing server version details, allowed methods are advertised via OPTIONS, and unknown endpoints return a clean 404 without leaking internals."
     }
   ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://wger.de/api/v2",
-      "type": "string"
+      "value": "https://wger.de/api/v2"
     },
     {
       "key": "accessToken",
-      "value": "",
-      "type": "string"
+      "secret": true
     },
     {
       "key": "refreshToken",
-      "value": "",
-      "type": "string"
+      "secret": true
     },
     {
       "key": "testRoutineId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "testSessionId",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "testPlanId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "testWeightId",
-      "value": "",
-      "type": "string"
+      "value": ""
     },
     {
       "key": "testExerciseId",
-      "value": "9",
-      "type": "string"
+      "value": ""
     },
     {
-      "key": "testDayId",
-      "value": "",
-      "type": "string"
+      "key": "loginErrorCode",
+      "value": ""
     }
   ]
 }
