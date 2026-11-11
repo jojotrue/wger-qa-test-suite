@@ -1,124 +1,103 @@
-# Test Case Documentation
+# Test Cases: wger Workout Manager API Suite
 
-**Project:** wger Workout Manager – QA API Test Suite  
-**Author:** Joanne Trujillo  
-**Total Test Cases:** 50  
-**Last Updated:** March 2026
+Last verified: November 11, 2026 (123 assertions, 116 passed, 7 known-bug failures, 0 errors).
 
----
+Each request runs multiple assertions; the **Expected** column summarizes them. Tests marked *Known fail* assert the correct behavior and fail until the defect is fixed. See the README for full findings.
 
-## Authentication (10 tests)
+## Authentication
 
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-AUTH-01 | POST | /api/v2/token/ | Valid credentials | 200 OK, access + refresh tokens returned | ✅ 200 OK |
-| TC-AUTH-02 | POST | /api/v2/token/ | Wrong password | 401 Unauthorized | ✅ 401 |
-| TC-AUTH-03 | POST | /api/v2/token/ | Non-existent user | 401 Unauthorized | ✅ 401 |
-| TC-AUTH-04 | POST | /api/v2/token/ | Empty body | 400 Bad Request | ✅ 400 |
-| TC-AUTH-05 | POST | /api/v2/token/ | SQL injection in username | 400/401 — injection not executed | ✅ 401 |
-| TC-AUTH-06 | POST | /api/v2/token/refresh/ | Valid refresh token | 200 OK, new access token returned | ✅ 200 OK |
-| TC-AUTH-07 | POST | /api/v2/token/refresh/ | Invalid refresh token | 401 Unauthorized | ✅ 401 |
-| TC-AUTH-08 | POST | /api/v2/token/verify/ | Valid access token | 200 OK | ✅ 200 OK |
-| TC-AUTH-09 | GET | /api/v2/routine/ | No token provided | 401 Unauthorized | ⚠️ 403 — see BUG-04 |
-| TC-AUTH-10 | GET | /api/v2/routine/ | Tampered JWT | 401 Unauthorized | ⚠️ 403 — see BUG-04 |
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-AUTH-01 | POST Login – Valid Credentials | `POST /allauth/app/v1/auth/login` | 200, access and refresh tokens in `meta`, password not echoed | Pass |
+| TC-AUTH-02 | POST Login – Wrong Password | `POST /allauth/app/v1/auth/login` | 400 with `errors`, no tokens | Pass |
+| TC-AUTH-03 | POST Login – Non-existent User | `POST /allauth/app/v1/auth/login` | 400, no tokens, same error code as AUTH-02 | Pass |
+| TC-AUTH-04 | POST Login – Empty Body | `POST /allauth/app/v1/auth/login` | 400 with validation errors, no tokens | Pass |
+| TC-AUTH-05 | POST Login – SQL Injection Attempt | `POST /allauth/app/v1/auth/login` | 400, no tokens, no database error text | Pass |
+| TC-AUTH-06 | POST Refresh Token – Valid | `POST /allauth/app/v1/tokens/refresh` | 200, new access token, refresh token rotated | Pass |
+| TC-AUTH-07 | POST Refresh Token – Invalid Token | `POST /allauth/app/v1/tokens/refresh` | 400, rejected as invalid (not missing), no tokens | Pass |
+| TC-AUTH-08 | POST Verify Token – Valid | `POST {{baseUrl}}/token/verify` | 200 | Pass |
+| TC-AUTH-09 | GET Protected Endpoint – No Token | `GET {{baseUrl}}/routine/` | 401 with no data returned | Known fail: 403 (BUG-01) |
+| TC-AUTH-10 | GET Protected Endpoint – Tampered JWT | `GET {{baseUrl}}/routine/` | 401 with no data returned | Known fail: 403 (BUG-01) |
+| TC-AUTH-11 | POST Refresh Token – Documented Endpoint | `POST {{baseUrl}}/token/refresh` | 200 (documented endpoint accepts login refresh token) | Known fail: 401 "Token has no type" (BUG-02) |
 
----
+## User Profile
 
-## User Profile (3 tests)
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-USER-01 | GET User Profile – Own | `GET {{baseUrl}}/userprofile/` | 200 with profile fields, no password | Pass |
+| TC-USER-02 | PATCH Update User Profile – Valid | `PATCH {{baseUrl}}/userprofile/` | 200, `sleep_hours` updated to the random value sent | Pass |
+| TC-USER-03 | Mass Assignment – Try to Escalate to Trainer | `PATCH {{baseUrl}}/userprofile/` | 200 or 400, no staff/superuser/trainer escalation | Pass |
 
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-USER-01 | GET | /api/v2/userprofile/ | Get own profile | 200 OK, user profile fields returned | ⚠️ 200 OK — see BUG-05 |
-| TC-USER-02 | PATCH | /api/v2/userprofile/ | Update user profile | 200 OK | ⚠️ 405 — see BUG-02 |
-| TC-USER-03 | PATCH | /api/v2/userprofile/ | Mass assignment — escalate to Trainer | 403 Forbidden or role unchanged | ⚠️ 405 — see BUG-02 |
+## Routines
 
----
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-ROUT-01 | GET List Routines – Authenticated | `GET {{baseUrl}}/routine/` | 200 paginated list | Pass |
+| TC-ROUT-02 | POST Create Routine – Valid | `POST {{baseUrl}}/routine/` | 201, numeric ID, name matches; saves `testRoutineId` | Pass |
+| TC-ROUT-03 | GET Routine by ID – Valid | `GET {{baseUrl}}/routine/{{testRoutineId}}/` | 200, ID matches saved routine | Pass |
+| TC-ROUT-04 | PATCH Update Routine – Valid | `PATCH {{baseUrl}}/routine/{{testRoutineId}}/` | 200, name updated with name-only PATCH | Pass |
+| TC-ROUT-06 | GET Routine – Not Found (ID 999999) | `GET {{baseUrl}}/routine/999999/` | 404 | Pass |
+| TC-ROUT-07 | GET Routine – Unauthenticated | `GET {{baseUrl}}/routine/{{testRoutineId}}/` | 401 with no data returned | Known fail: 403 (BUG-01) |
+| TC-ROUT-08 | GET List Routines – Pagination | `GET {{baseUrl}}/routine/?limit=5&offset=0` | 200, at most 5 results | Pass |
+| TC-ROUT-09 | DELETE Routine – Valid | `DELETE {{baseUrl}}/routine/{{testRoutineId}}/` | 204 | Pass |
+| TC-ROUT-10 | DELETE Routine – Already Deleted (404) | `DELETE {{baseUrl}}/routine/{{testRoutineId}}/` | 404 | Pass |
 
-## Routines (9 tests)
+## Exercises (Public Endpoints)
 
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-ROUT-01 | GET | /api/v2/routine/ | Authenticated list | 200 OK, array of routines | ✅ 200 OK |
-| TC-ROUT-02 | POST | /api/v2/routine/ | Valid creation | 201 Created, ID returned | ✅ 201 Created |
-| TC-ROUT-03 | GET | /api/v2/routine/{id}/ | Valid ID | 200 OK, routine object | ✅ 200 OK |
-| TC-ROUT-04 | PATCH | /api/v2/routine/{id}/ | Valid update | 200 OK | ⚠️ 200 OK — see BUG-03 |
-| TC-ROUT-06 | GET | /api/v2/routine/999999/ | Non-existent ID | 404 Not Found | ✅ 404 |
-| TC-ROUT-07 | GET | /api/v2/routine/ | No auth token | 401 Unauthorized | ⚠️ 403 — see BUG-04 |
-| TC-ROUT-08 | GET | /api/v2/routine/?limit=5&offset=0 | Pagination | 200 OK, paginated results | ✅ 200 OK |
-| TC-ROUT-09 | DELETE | /api/v2/routine/{id}/ | Valid delete | 204 No Content | ✅ 204 |
-| TC-ROUT-10 | DELETE | /api/v2/routine/{id}/ | Already deleted | 404 Not Found | ✅ 404 |
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-EX-01 | GET Exercise List – No Auth Required | `GET {{baseUrl}}/exercise/` | 200 paginated list; saves `testExerciseId` | Pass |
+| TC-EX-02 | GET Exercise by ID – Valid | `GET {{baseUrl}}/exercise/{{testExerciseId}}/` | 200 with id, category, muscles | Pass |
+| TC-EX-03 | GET Exercise by ID – Not Found | `GET {{baseUrl}}/exercise/99999999/` | 404 | Pass |
+| TC-EX-04 | GET Exercise List – Filter by Category | `GET {{baseUrl}}/exercise/?category=10` | 200, every result in category 10 | Pass |
+| TC-EX-05 | GET Exercise List – Filter by Equipment | `GET {{baseUrl}}/exercise/?equipment=3` | 200, results array | Pass |
+| TC-EX-06 | GET Exercise Categories – Public | `GET {{baseUrl}}/exercisecategory/` | 200, non-empty list with names | Pass |
+| TC-EX-07 | GET Muscles – Public | `GET {{baseUrl}}/muscle/` | 200, non-empty list | Pass |
 
----
+## Workout Sessions
 
-## Exercises — Public Endpoints (7 tests)
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-SESS-01 | GET Workout Sessions List | `GET {{baseUrl}}/workoutsession/` | 200 paginated list | Pass |
+| TC-SESS-02 | POST Create Session – Valid | `POST {{baseUrl}}/workoutsession/` | 201, UUID string ID; saves `testSessionId` | Pass |
+| TC-SESS-03 | GET Session by ID – Valid | `GET {{baseUrl}}/workoutsession/{{testSessionId}}/` | 200, current-schema fields, ID matches | Pass |
+| TC-SESS-04 | POST Create Session – Invalid Date | `POST {{baseUrl}}/workoutsession/` | 400 with date field error | Pass |
+| TC-SESS-05 | GET Sessions – Ordered by Start Time | `GET {{baseUrl}}/workoutsession/?ordering=-datetime_start` | 200, sorted newest first by `datetime_start` | Pass |
+| TC-SESS-06 | DELETE Session – Valid | `DELETE {{baseUrl}}/workoutsession/{{testSessionId}}/` | 204 | Pass |
 
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-EX-01 | GET | /api/v2/exercise/ | No auth required | 200 OK, public list | ✅ 200 OK |
-| TC-EX-02 | GET | /api/v2/exercise/{id}/ | Valid exercise ID | 200 OK, exercise object | ✅ 200 OK |
-| TC-EX-03 | GET | /api/v2/exercise/999999/ | Non-existent ID | 404 Not Found | ✅ 404 |
-| TC-EX-04 | GET | /api/v2/exercise/?category=10 | Filter by category | 200 OK, filtered results | ✅ 200 OK |
-| TC-EX-05 | GET | /api/v2/exercise/?equipment=1 | Filter by equipment | 200 OK, filtered results | ✅ 200 OK |
-| TC-EX-06 | GET | /api/v2/exercisecategory/ | Public categories list | 200 OK | ✅ 200 OK |
-| TC-EX-07 | GET | /api/v2/muscle/ | Public muscles list | 200 OK | ✅ 200 OK |
+## Weight Log
 
----
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-WGHT-01 | GET Weight Entries | `GET {{baseUrl}}/weightentry/` | 200 paginated list | Pass |
+| TC-WGHT-02 | POST Create Weight Entry – Valid | `POST {{baseUrl}}/weightentry/` | 201, weight 75.50 saved | Pass |
+| TC-WGHT-03 | POST Create Weight Entry – Negative Weight | `POST {{baseUrl}}/weightentry/` | 400 on `weight` only, message states 20–350 kg | Pass |
+| TC-WGHT-04 | POST Create Weight Entry – Missing Date (defaults to now) | `POST {{baseUrl}}/weightentry/` | 201, date defaults to current time, weight saved | Pass |
 
-## Workout Sessions (6 tests)
+## Security Tests
 
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-SESS-01 | GET | /api/v2/workoutsession/ | Authenticated list | 200 OK, array of sessions | ✅ 200 OK |
-| TC-SESS-02 | POST | /api/v2/workoutsession/ | Valid session creation | 201 Created, ID returned | ✅ 201 Created |
-| TC-SESS-03 | GET | /api/v2/workoutsession/{id}/ | Valid ID | 200 OK, session fields present | ⚠️ 200 OK — see BUG-01 |
-| TC-SESS-04 | POST | /api/v2/workoutsession/ | Invalid date format | 400 Bad Request | ✅ 400 |
-| TC-SESS-05 | GET | /api/v2/workoutsession/?date=2026-03-11 | Filter by date | 200 OK, filtered results | ✅ 200 OK |
-| TC-SESS-06 | DELETE | /api/v2/workoutsession/{id}/ | Valid delete | 204 No Content | ✅ 204 |
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-SEC-01 | BOLA – Access Another User's Routine (ID 1) | `GET {{baseUrl}}/routine/1/` | 403 or 404, no data leaked | Pass (404) |
+| TC-SEC-02 | BOLA – Access Another User's Weight Entry (ID 1) | `GET {{baseUrl}}/weightentry/1/` | 403 or 404, no data leaked | Pass (404) |
+| TC-SEC-03 | Expired JWT – Access Protected Route | `GET {{baseUrl}}/routine/` | 401 with no data returned | Known fail: 403 (BUG-01) |
+| TC-SEC-04 | No Auth Header – Protected Route | `GET {{baseUrl}}/workoutsession/` | 401 with no data returned | Known fail: 403 (BUG-01) |
+| TC-SEC-05 | Malformed Auth Header | `GET {{baseUrl}}/routine/` | 401 with no data returned | Known fail: 403 (BUG-01) |
+| TC-SEC-06 | XSS Payload in Routine Name | `POST {{baseUrl}}/routine/` | 201 or 400, JSON response; created routine deleted | Pass (201, stored as is) |
+| TC-SEC-07 | Oversized Payload | `POST {{baseUrl}}/routine/` | 400 on `name` only, 25-character limit | Pass |
 
----
+## API Health & Structure
 
-##  Weight Log (4 tests)
+| ID | Scenario | Request | Expected | Result |
+|----|----------|---------|----------|--------|
+| TC-HLTH-01 | GET API Root – No Auth | `GET {{baseUrl}}/` | 200, root lists main endpoints | Pass |
+| TC-HLTH-02 | GET API Root – HTTPS Request, No Version Leak | `GET {{baseUrl}}/` | HTTPS request, no server version in headers | Pass |
+| TC-HLTH-03 | OPTIONS – Check Allowed Methods on Routine | `OPTIONS {{baseUrl}}/routine/` | 200, `Allow` includes GET and POST | Pass |
+| TC-HLTH-04 | GET Invalid Endpoint – 404 Handling | `GET {{baseUrl}}/thisdoesnotexist/` | 404 with no stack trace or framework text | Pass |
 
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-WGHT-01 | GET | /api/v2/weightentry/ | Authenticated list | 200 OK, array of entries | ✅ 200 OK |
-| TC-WGHT-02 | POST | /api/v2/weightentry/ | Valid entry | 201 Created | ✅ 201 Created |
-| TC-WGHT-03 | POST | /api/v2/weightentry/ | Negative weight value | 400 Bad Request | ✅ 400 |
-| TC-WGHT-04 | POST | /api/v2/weightentry/ | Missing date field | 400 Bad Request | ✅ 400 |
+## Defects
 
----
-
-## Security Tests (7 tests)
-
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-SEC-01 | GET | /api/v2/routine/1/ | BOLA — access another user's routine | 403 or 404 | ✅ 404 |
-| TC-SEC-02 | GET | /api/v2/weightentry/1/ | BOLA — access another user's weight entry | 403 or 404 | ✅ 404 |
-| TC-SEC-03 | GET | /api/v2/routine/ | Expired JWT | 401 Unauthorized | ⚠️ 403 — see BUG-04 |
-| TC-SEC-04 | GET | /api/v2/workoutsession/ | No Authorization header | 401 Unauthorized | ⚠️ 403 — see BUG-04 |
-| TC-SEC-05 | GET | /api/v2/routine/ | Malformed auth header | 401 Unauthorized | ⚠️ 403 — see BUG-04 |
-| TC-SEC-06 | POST | /api/v2/routine/ | XSS payload in routine name | 400 or payload sanitized | ✅ Pass |
-| TC-SEC-07 | POST | /api/v2/routine/ | Oversized payload | 400 or 413 | ✅ Pass |
-
----
-
-##  API Health & Structure (4 tests)
-
-| Test Case | Method | Endpoint | Scenario | Expected Result | Actual Result |
-|-----------|--------|----------|----------|----------------|---------------|
-| TC-HLTH-01 | GET | /api/v2/ | API root — no auth | 200 OK, endpoint list | ✅ 200 OK |
-| TC-HLTH-02 | GET | /api/v2/ | HTTPS enforced | No HTTP downgrade | ✅ Pass |
-| TC-HLTH-03 | OPTIONS | /api/v2/routine/ | Check allowed methods | 200 OK, methods listed | ✅ 200 OK |
-| TC-HLTH-04 | GET | /api/v2/invalidendpoint/ | 404 handling | 404 Not Found, JSON response | ✅ 404 |
-
----
-
-## Findings Summary
-
-| ID | Test Cases Affected | Endpoint | Finding |
-|----|---------------------|----------|---------|
-| BUG-01 | TC-SESS-03 | GET /workoutsession/{id}/ | `workout` field absent from response — replaced by `routine`. Undocumented API change. |
-| BUG-02 | TC-USER-02, TC-USER-03 | PATCH /userprofile/ | PATCH and PUT both return 405 — user profile endpoint appears read-only. |
-| BUG-03 | TC-ROUT-04 | PATCH /routine/{id}/ | PATCH requires all fields — partial updates not supported. Violates REST PATCH convention. |
-| BUG-04 | TC-AUTH-09, TC-AUTH-10, TC-ROUT-07, TC-SEC-03, TC-SEC-04, TC-SEC-05 | Multiple | API returns 403 Forbidden instead of 401 Unauthorized for unauthenticated requests. Deviates from REST standard. |
-| BUG-05 | TC-USER-01 | GET /userprofile/ | Response is a flat object, not a paginated list. Fields `id` and `trainer` absent from response schema. |
+| ID | Tests | Summary |
+|----|-------|---------|
+| BUG-01 | TC-AUTH-09, TC-AUTH-10, TC-ROUT-07, TC-SEC-03, TC-SEC-04, TC-SEC-05 | Missing, tampered, expired, or malformed credentials return 403 instead of 401. Access is denied correctly. |
+| BUG-02 | TC-AUTH-11 | `POST /api/v2/token/refresh` rejects refresh tokens issued by the current login endpoint (`"Token has no type"`), while `/api/v2/token/verify` accepts them. |
